@@ -6,7 +6,7 @@ export default class App extends Component {
     super(props);
   }
   render() {
-    return <p>hello</p>
+    return <h1>hello</h1>
   }
 } 
 

@@ -4,29 +4,30 @@ from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import (
-    CustomerSerializer,
-    CreateCustomerSerializer,
+    UserSerializer,
+    CreateUserSerializer,
     ExpenseSerializer,
     CreateExpenseSerializer,
     HistorySerializer,
     CreateHistorySerializer,
 )
-from .models import Customers, Expense, History
+from .models import Expense, History
+from django.contrib.auth.models import User
 from rest_framework.permissions import IsAuthenticated
 # Create your views here.
 
 class UsersView(APIView):
-    queryset = Customers.objects.all()
-    serializer_class = CustomerSerializer
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
     # permission_classes = [IsAuthenticated]  # Thêm dòng này
 
     def get(self, request, *args, **kwargs):
-        customers = self.queryset.all()
-        serializer = self.serializer_class(customers, many=True)
+        users = self.queryset.all()
+        serializer = self.serializer_class(users, many=True)
         return Response(serializer.data)
     
 class CreateUserView(APIView):
-    serializer_class = CreateCustomerSerializer
+    serializer_class = CreateUserSerializer
 #   permission_classes = [IsAuthenticated]  # Thêm dòng này
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)

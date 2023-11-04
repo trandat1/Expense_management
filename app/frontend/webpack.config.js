@@ -16,6 +16,20 @@ module.exports = {
           loader: "babel-loader",
         },
       },
+      {
+        test: /\.(png|jpe?g|gif|avif)$/i,
+        use: [
+          {
+            loader: "file-loader",
+            options: {
+              name: "[path][name].[ext]",
+              context: path.resolve(__dirname, "static"),
+              publicPath: "/",
+              useRelativePaths: true,
+            },
+          },
+        ],
+      },
     ],
   },
   optimization: {
