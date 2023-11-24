@@ -21,21 +21,10 @@ class Profile(models.Model):
     birth = models.DateField(null=True)
 
 
-@receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        Profile.objects.get_or_create(user=instance)
-
-
-@receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    instance.profile.save()
-
-
-@receiver(post_save, sender=User)
-def create_user_token(sender, instance, created, **kwargs):
-    if created:
-        Token.objects.get_or_create(user=instance)
+# @receiver(post_save, sender=User)
+# def create_user_token(sender, instance, created, **kwargs):
+#     if created:
+#         Token.objects.get_or_create(user=instance)
 
 
 class Expense(models.Model):

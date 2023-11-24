@@ -14,26 +14,40 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer()
-    
+    token = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ("id", "username", "email", "password", "profile")
+        fields = ("id", "token", "username", "email", "profile")
+
+    def get_token(self, obj):
+        token, created = Token.objects.get_or_create(user=obj)
+        return token.key
 
 
 class CreateUserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer()
+    token = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("id", "username", "email", "password", "profile")
+        fields = ("id", "token", "username", "email", "password", "profile")
+
+    def get_token(self, obj):
+        token, created = Token.objects.get_or_create(user=obj)
+        return token.key
 
 
 class UpdateUserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer()
-
+    token = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ("id", "username", "email", "password", "profile")
+        fields = ("id","token", "username", "email", "password", "profile")
+    
+    def get_token(self, obj):
+        token = Token.objects.get(user=obj)
+        return token.key
 
 
 class ExpenseSerializer(serializers.ModelSerializer):

@@ -16,6 +16,7 @@ from .serializers import (
 from .models import Expense, History
 from django.contrib.auth.models import User
 from rest_framework.permissions import IsAuthenticated
+from django.db.utils import IntegrityError
 
 # Create your views here.
 
@@ -37,17 +38,35 @@ class CreateUserView(APIView):
     #   permission_classes = [IsAuthenticated]  # Thêm dòng này
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
-        data = request.data
+
         if serializer.is_valid():
+            try:
+                # Tạo người dùng
+                user = User(
+                    email=request.data["email"], username=request.data["username"]
+                )
+                user.set_password(request.data["password"])
+                user.save()
+            except IntegrityError as e:
+                if "unique constraint" in str(e):
+                    return Response(
+                        {"error": "A user with that email already exists."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                else:
+                    print(e)
+                    return Response(
+                        {"error": "An error occurred while creating the user."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    )
+
             profile_data = {}
             for key in ["profile.sex", "profile.birth", "profile.image"]:
                 profile_data[key.split(".")[1]] = request.data.pop(key, None)
             image = profile_data.get("image", None)
             sex = profile_data.get("sex", None)
             birth = profile_data.get("birth", None)
-            user = User(email=data["email"], username=data["username"])
-            user.set_password(data["password"])
-            user.save()
+
             if image is not None:
                 user.profile.image = image[0] if isinstance(image, list) else image
             if sex is not None:
@@ -75,7 +94,8 @@ class CreateUserView(APIView):
 
 
 class UpdateUserView(APIView):
-    serializer_class = UserSerializer
+    serializer_class = UpdateUserSerializer
+
     def get(self, request, id, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         user_id = id
@@ -85,46 +105,45 @@ class UpdateUserView(APIView):
                 self.serializer_class(user_data).data, status=status.HTTP_200_OK
             )
         return Response(serializer.errors, status=status.HTTP_404_NOT_FOUND)
-    
-    permission_classes = [IsAuthenticated]
-    def put(self, request, id, *args, **kwargs):
+
+    # permission_classes = [IsAuthenticated]
+
+    def post(self, request, id, *args, **kwargs):
         user_id = id
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
-
+        serializer = self.serializer_class(data=request.data)
         data = request.data
         profile_data = {}
         for key in ["profile.sex", "profile.birth", "profile.image"]:
-            profile_data[key.split(".")[1]] = data.pop(key, None)
+            profile_data[key.split(".")[1]] = request.data.pop(key, None)
+        if profile_data:
+            image = profile_data.get("image", None)
+            sex = profile_data.get("sex", None)
+            birth = profile_data.get("birth", None)
 
-        image = profile_data.get("image", None)
-        sex = profile_data.get("sex", None)
-        birth = profile_data.get("birth", None)
-
-        user.set_password(data["password"])
-        user.save()
-
-        if image is not None:
             user.profile.image = image[0] if isinstance(image, list) else image
-        if sex is not None:
             user.profile.sex = sex[0] if isinstance(sex, list) else sex
-        if birth is not None:
             if isinstance(birth, str):
-                birth = datetime.fromisoformat(birth).date()
+                birth = datetime.strptime(birth, "%Y-%m-%d").date()
+                birth = birth.strftime("%Y-%m-%d")
             elif isinstance(birth, list):
-                birth = datetime.fromisoformat(birth[0]).date()
+                birth = datetime.strptime(birth[0], "%Y-%m-%d").date()
+                birth = birth.strftime("%Y-%m-%d")
             else:
                 birth = None
             user.profile.birth = birth
-
-        if image is not None:
             image = str(user.profile.image)
             user.profile.image = image.replace("frontend", "")
-        
-        user.profile.save()
+            user.profile.save()
 
-        return Response(
-            self.serializer_class(user).data, status=status.HTTP_200_OK
-        )
+        if data.get("password") is not None:
+            user.set_password(data["password"])
+        user.save()
+        if user:
+            return Response(
+                self.serializer_class(user).data, status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
