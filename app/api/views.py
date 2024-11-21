@@ -35,10 +35,8 @@ class UsersView(APIView):
 class CreateUserView(APIView):
     serializer_class = CreateUserSerializer
 
-    #   permission_classes = [IsAuthenticated]  # Thêm dòng này
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
-
         if serializer.is_valid():
             try:
                 # Tạo người dùng
@@ -62,7 +60,8 @@ class CreateUserView(APIView):
 
             profile_data = {}
             for key in ["profile.sex", "profile.birth", "profile.image"]:
-                profile_data[key.split(".")[1]] = request.data.pop(key, None)
+                if request.data.key:
+                    profile_data[key.split(".")[1]] = request.data.pop(key, None)
             image = profile_data.get("image", None)
             sex = profile_data.get("sex", None)
             birth = profile_data.get("birth", None)
@@ -97,14 +96,14 @@ class UpdateUserView(APIView):
     serializer_class = UpdateUserSerializer
 
     def get(self, request, id, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data)
-        user_id = id
-        user_data = User.objects.get(id=user_id)
-        if user_data:
-            return Response(
-                self.serializer_class(user_data).data, status=status.HTTP_200_OK
-            )
-        return Response(serializer.errors, status=status.HTTP_404_NOT_FOUND)
+        try:
+            user_data = User.objects.get(id=id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        context = {"include_token": False}  # Không bao gồm token
+        serializer = self.serializer_class(user_data, context=context)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     # permission_classes = [IsAuthenticated]
 
@@ -146,4 +145,56 @@ class UpdateUserView(APIView):
             return Response(
                 self.serializer_class(user).data, status=status.HTTP_201_CREATED
             )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class HistoriesUserView(APIView):
+    serializer_class = HistorySerializer
+
+    def get(self, request, user_id, *args, **kwargs):
+        # Lấy tất cả các history của người dùng với user_id cụ thể
+        histories = History.objects.filter(user__id=user_id)
+        
+        # Kiểm tra nếu người dùng không có lịch sử
+        if not histories.exists():
+            return Response(
+                {"detail": "No histories found for this user."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        
+        # Serialize dữ liệu lịch sử
+        serializer = self.serializer_class(histories, many=True)
+        return Response(serializer.data)
+    
+
+class Create_Histories_User(APIView):
+    serializer_class = CreateHistorySerializer
+
+    def post(self,request,user_id, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            history_data = {}
+            
+            # Tạo bản sao của QueryDict để có thể chỉnh sửa
+            mutable_data = request.data.copy()
+            
+            for key in ["date", "amount", "description", "field"]:
+                if key in mutable_data:  # Kiểm tra nếu key tồn tại
+                    # Thêm dữ liệu vào history_data và loại bỏ key khỏi mutable_data
+                    history_data[key] = mutable_data.pop(key, None)
+            
+            user = User.objects.get(id=user_id)  # Hoặc lấy từ dữ liệu request nếu có
+            # Tạo đối tượng History và lưu vào cơ sở dữ liệu
+            history_instance = History(
+                user = user,
+                amount = float(history_data.get('amount')[0]),
+                description = history_data.get('description')[0],
+                field = history_data.get('field')[0]
+            )
+            if history_data.get('date'):
+                history_instance.data = history_data.get('date')
+            history_instance.save()
+            return Response(
+                self.serializer_class(history_instance).data, status=status.HTTP_201_CREATED
+            )
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -44,6 +44,10 @@ INSTALLED_APPS = [
     # 'oauth2_provider',
 ]
 
+
+
+
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -83,7 +87,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'expense',
         'USER': 'root',
-        'PASSWORD': '',
+        'PASSWORD': 'Trandata1@',
         'HOST':'localhost',
         'PORT':'3306',
     }
@@ -137,7 +141,16 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Cấu hình email sử dụng Gmail
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Đặt backend email là SMTP
+EMAIL_HOST = 'smtp.gmail.com'  # Sử dụng SMTP server của Gmail
+EMAIL_PORT = 587  # Cổng SMTP, 587 cho TLS, 465 cho SSL
+EMAIL_USE_TLS = True  # Sử dụng TLS để bảo mật kết nối
+EMAIL_HOST_USER = 'GiaVien2002@gmail.com'  # Địa chỉ email của bạn (email gửi)
+EMAIL_HOST_PASSWORD = 'dcaf ipmh crfm bjem'  # Mật khẩu email của bạn
 
+# (Tùy chọn) Cấu hình để gửi mail từ địa chỉ email khác nếu cần thiết
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
@@ -148,3 +161,5 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+

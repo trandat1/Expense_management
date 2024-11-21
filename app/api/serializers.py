@@ -5,7 +5,7 @@ from rest_framework.authtoken.models import Token
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(max_length=None, use_url=True)
+    image = serializers.ImageField(max_length=None, use_url=True, default="static/images/uploads/account-icon-user-icon-vector-graphics_292645-552.avif")
 
     class Meta:
         model = Profile
@@ -14,16 +14,17 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer()
-    token = serializers.SerializerMethodField()
+    token = serializers.SerializerMethodField(required=False)
 
     class Meta:
         model = User
-        fields = ("id", "token", "username", "email", "profile")
+        fields = ("id", "token","username", "email", "profile")
 
     def get_token(self, obj):
-        token, created = Token.objects.get_or_create(user=obj)
-        return token.key
-
+        if self.context.get("include_token", False):
+            token = Token.objects.get(user=obj)
+            return token.key
+        return ""
 
 class CreateUserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer()
@@ -40,14 +41,16 @@ class CreateUserSerializer(serializers.ModelSerializer):
 
 class UpdateUserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer()
-    token = serializers.SerializerMethodField()
+    token = serializers.SerializerMethodField(required=False)
     class Meta:
         model = User
         fields = ("id","token", "username", "email", "password", "profile")
     
     def get_token(self, obj):
-        token = Token.objects.get(user=obj)
-        return token.key
+        if self.context.get("include_token", False):
+            token = Token.objects.get(user=obj)
+            return token.key
+        return ""
 
 
 class ExpenseSerializer(serializers.ModelSerializer):
@@ -63,12 +66,20 @@ class CreateExpenseSerializer(serializers.ModelSerializer):
 
 
 class HistorySerializer(serializers.ModelSerializer):
+    # balance = serializers.SerializerMethodField()
     class Meta:
         model = History
-        fields = ("user", "date", "amount", "description", "fields")
-
+        fields = ("user", "date", "amount", "description", "field","balance")
+    
 
 class CreateHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = History
-        fields = ("user", "date", "amount", "description", "fields")
+        fields = ['date', 'amount', 'description', 'field', 'balance']  # Liệt kê các trường cần trả về
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if 'date' in data and instance.date:
+            # Chuyển đổi datetime thành date dạng `YYYY-MM-DD`
+            data['date'] = instance.date.isoformat()  # Chỉ giữ phần ngày
+        return data
